@@ -1,0 +1,112 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_sharepointonline": {
+        "runtimeSource": "embedded",
+        "connection": {
+          "connectionReferenceLogicalName": "j2_sharedsharepointonline_a6aca"
+        },
+        "api": {
+          "name": "shared_sharepointonline"
+        }
+      },
+      "shared_office365": {
+        "runtimeSource": "embedded",
+        "connection": {
+          "connectionReferenceLogicalName": "j2_sharedoffice365_d2342"
+        },
+        "api": {
+          "name": "shared_office365"
+        }
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        },
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        }
+      },
+      "triggers": {
+        "When_an_item_is_created_or_modified": {
+          "recurrence": {
+            "frequency": "Minute",
+            "interval": 5
+          },
+          "metadata": {
+            "operationMetadataId": "17c33d00-5c28-4d16-a862-e36f4bdabbaa"
+          },
+          "type": "OpenApiConnection",
+          "inputs": {
+            "parameters": {
+              "dataset": "https://jacobsengineering.sharepoint.com/sites/CP101042CENTCOMJ2/Ext",
+              "table": "1cfce63f-17e4-4fc9-8ca8-91fbc8999047",
+              "view": "4e33b59a-8c26-4575-ac40-54cd7717df07"
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+              "connectionName": "shared_sharepointonline",
+              "operationId": "GetOnUpdatedItems"
+            },
+            "authentication": "@parameters('$authentication')"
+          }
+        }
+      },
+      "actions": {
+        "For_each": {
+          "foreach": "@triggerOutputs()?['body/value']",
+          "actions": {
+            "Condition": {
+              "actions": {
+                "Send_an_email_(V2)": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "emailMessage/To": "@item()?['Team_x0020_Lead_x0020_E_x002d_Ma']?['Email']",
+                      "emailMessage/Subject": "IDP Approval Request",
+                      "emailMessage/Body": "<p>@{item()?['Team_x0020_Lead_x0020_E_x002d_Ma']?['DisplayName']},</p><br><p>@{item()?['Employee_x0020_E_x002d_Mail']?['DisplayName']} is requesting to use IDP training hours to complete @{item()?['Course_x0020_Title_x003a_IDP_x00']?['Value']}. To approve this request, please update the Training Status to In Progress.</p><br><br><p><a href=\"https://apps.powerapps.com/play/e/default-37247798-f42c-42fd-8a37-d49c7128d36b/a/60797d0b-f215-440e-b1ac-2c69ef26c790?tenantId=37247798-f42c-42fd-8a37-d49c7128d36b&amp;hint=822ebf1f-3488-44dc-a19c-d765e052f0e6&amp;sourcetime=1708466435243\">CENTCOM J2 IDP Managers App - Power Apps</a></p><br>",
+                      "emailMessage/From": "CENTCOMJ2WebSupport@jacobs.com",
+                      "emailMessage/Cc": "@item()?['Employee_x0020_E_x002d_Mail']?['Email']",
+                      "emailMessage/Importance": "Normal"
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365",
+                      "connectionName": "shared_office365",
+                      "operationId": "SendEmailV2"
+                    },
+                    "authentication": "@parameters('$authentication')"
+                  }
+                }
+              },
+              "else": {
+                "actions": {}
+              },
+              "expression": {
+                "and": [
+                  {
+                    "equals": [
+                      "@item()?['Training_x0020_Status']?['Value']",
+                      "Requested"
+                    ]
+                  }
+                ]
+              },
+              "type": "If"
+            }
+          },
+          "runAfter": {},
+          "type": "Foreach"
+        }
+      },
+      "outputs": {}
+    },
+    "templateName": null
+  },
+  "schemaVersion": "1.0.0.0"
+}
